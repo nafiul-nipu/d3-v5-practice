@@ -1,15 +1,24 @@
 /*
 *    main.js
 *    Mastering Data Visualization with D3.js
-*    10.2 - File Separation 
+*    10.5 - Handling events across objects
 */
 
+// Global variables
+var lineChart,
+    donutChart1,
+    donutChart2;
+var filteredData = {};
+var donutData = [];
 var parseTime = d3.timeParse("%d/%m/%Y");
 var formatTime = d3.timeFormat("%d/%m/%Y");
+var color = d3.scaleOrdinal(d3.schemeDark2);
 
 // Event listeners
-$("#coin-select").on("change", update)
-$("#var-select").on("change", update)
+$("#coin-select").on("change", function() { 
+    coinChanged();
+})
+$("#var-select").on("change", function() { lineChart.wrangleData() })
 
 // Add jQuery UI slider
 $("#date-slider").slider({
@@ -21,14 +30,23 @@ $("#date-slider").slider({
     slide: function(event, ui){
         $("#dateLabel1").text(formatTime(new Date(ui.values[0])));
         $("#dateLabel2").text(formatTime(new Date(ui.values[1])));
-        update();
+        lineChart.wrangleData();
     }
 });
 
-d3.json("data/coins.json").then(function(data){
+function arcClicked(arc){
+    $("#coin-select").val(arc.data.coin);
+    coinChanged();
+}
 
+function coinChanged(){
+    donutChart1.wrangleData();
+    donutChart2.wrangleData();
+    lineChart.wrangleData();
+}
+
+d3.json("data/coins.json").then(function(data){
     // Prepare and clean data
-    filteredData = {};
     for (var coin in data) {
         if (!data.hasOwnProperty(coin)) {
             continue;
@@ -42,8 +60,15 @@ d3.json("data/coins.json").then(function(data){
             d["market_cap"] = +d["market_cap"];
             d["date"] = parseTime(d["date"])
         });
+        donutData.push({
+            "coin": coin,
+            "data": filteredData[coin].slice(-1)[0]
+        })
     }
 
-    // Run the visualization for the first time
-    update();
+    lineChart = new LineChart("#line-area");
+
+    donutChart1 = new DonutChart("#donut-area1", "24h_vol");
+    donutChart2 = new DonutChart("#donut-area2", "market_cap");
+
 })
